@@ -13,7 +13,6 @@ from datetime import datetime
 from config import Config
 import os
 
-
 class ObservationExtractor:
     def __init__(self):
         self.ocr_api_key = Config.OCR_API_KEY
@@ -84,9 +83,17 @@ class ObservationExtractor:
         """Process extracted text with Groq AI"""
         try:
             system_prompt = """You are an AI assistant for a learning observation system. Extract and structure information from the provided observation sheet text.
+
+CRITICAL INSTRUCTIONS FOR NAME HANDLING:
+- Do NOT use any names that appear in the observation text or audio transcription
+- For the "studentName" field, ONLY use names that are explicitly provided by the system/database
+- If no database name is provided, use "Student" as the default
+- NEVER assume gender - always refer to the student as "the student" or "Student" in descriptions
+- Do not use gender-specific pronouns (he/his, she/her) in any part of the response
+
 The observation sheets typically have the following structure:
 - Title (usually "The Observer")
-- Student information (Name, Roll Number/ID)
+- Student information (Name, Roll Number/ID) - IGNORE names from this section
 - Date and Time information
 - Core Observation Section with time slots
 - Teaching content for each time slot
@@ -94,22 +101,22 @@ The observation sheets typically have the following structure:
 
 Format your response as JSON with the following structure:
 {
-  "studentName": "Student's name if available, otherwise use the title of the observation",
+  "studentName": "Use ONLY the database-provided name, never from observation text",
   "studentId": "Student ID or Roll Number",
   "className": "Class name or subject being taught",
   "date": "Date of observation",
-  "observations": "Detailed description of what was learned",
-  "strengths": ["List of strengths observed in the student"],
-  "areasOfDevelopment": ["List of areas where the student needs improvement"],
-  "recommendations": ["List of recommended actions for improvement"],
+  "observations": "Detailed description of what was learned - refer to 'the student' not by name",
+  "strengths": ["List of strengths observed - use 'the student' in descriptions"],
+  "areasOfDevelopment": ["List of areas where the student needs improvement - use 'the student'"],
+  "recommendations": ["List of recommended actions - refer to 'the student'"],
   "themeOfDay": "Main theme or topic of the day",
   "curiositySeed": "Something that sparked the child's interest"
 }
 
 For observations, provide full detailed descriptions like:
-"The student learned how to make maggi from their mom through in-person mode, including all steps from boiling water to adding spices"
+"The student learned how to make maggi from their parent through in-person mode, including all steps from boiling water to adding spices"
 
-Be creative in extracting information based on context."""
+IMPORTANT: Never use gender-specific language or names from the observation text. Always refer to 'the student' in descriptions."""
 
             # Send request to Groq API
             response = requests.post(
@@ -216,7 +223,14 @@ Be creative in extracting information based on context."""
         try:
             prompt = f"""
             Convert the following observation text into a conversational format between an Observer and a Child. 
-            Format it as a natural dialogue where:
+
+CRITICAL INSTRUCTIONS:
+- NEVER use any names that appear in the raw text or audio
+- Always refer to the child as "Child" in the dialogue labels
+- Do not assume gender - avoid using he/his, she/her pronouns
+- Use gender-neutral language throughout the conversation
+
+Format it as a natural dialogue where:
             - Observer speaks first with questions, instructions, or observations
             - Child responds naturally based on the context
             - Use "Observer:" and "Child:" labels for each speaker
@@ -225,6 +239,8 @@ Be creative in extracting information based on context."""
             - If it's narrative observations, convert them into likely dialogue
             - Create a natural flow of conversation that would lead to the observations described
             - Include educational moments and learning interactions
+            - NEVER use names from the original text - always use "Child:" as the label
+            - Avoid gender assumptions in the dialogue content
 
             Original observation text:
             {raw_text}
@@ -235,7 +251,7 @@ Be creative in extracting information based on context."""
             Observer: [follow-up from observer]
             Child: [child's response]
 
-            Keep it natural, educational, and age-appropriate. Make sure the conversation flows logically and would realistically result in the observations described in the original text.
+            Keep it natural, educational, and age-appropriate. Make sure the conversation flows logically and would realistically result in the observations described in the original text. Remember to never use names from the original text and avoid gender-specific language.
             """
 
             # Use the same Gemini API pattern as your existing methods
@@ -282,7 +298,14 @@ Be creative in extracting information based on context."""
         prompt = f"""
         You are an educational observer tasked with generating a comprehensive and accurate Daily Growth Report based on the following observational notes from a student session. 
 
-        Please carefully analyze the given text and complete the report using the exact format, emojis, section titles, and scoring rubrics as described below. The student should be referred to consistently using gender-specific pronouns (e.g., he/his or she/her) — infer gender from the name or text, or default to 'he/his' if unclear.
+        CRITICAL INSTRUCTIONS FOR NAME AND GENDER USAGE:
+        - NEVER extract or use any name from the audio transcription or text content
+        - ALWAYS use the exact name provided: {user_info['student_name']}
+        - NEVER assume gender - always refer to the student by their name "{user_info['student_name']}" throughout the report
+        - Do not use pronouns like he/his, she/her, they/them - use the student's name consistently
+        - If you need to refer to the student multiple times, use "{user_info['student_name']}" or "the student"
+
+        Please carefully analyze the given text and complete the report using the exact format, emojis, section titles, and scoring rubrics as described below. The student should be referred to consistently using their provided name "{user_info['student_name']}" - never use gender-specific pronouns or names from the audio/text content.
 
         📌 Important Instructions for the Report:
         - Follow the format exactly as shown below.
@@ -294,6 +317,8 @@ Be creative in extracting information based on context."""
         📈 Needs Work (1-2 areas) – Area not activated or underperforming today
         - Include the new Communication Skills & Thought Clarity section.
         - The tone should be professional, warm, and insightful — aimed at helping parents understand their child's daily growth.
+        - REMEMBER: Always use "{user_info['student_name']}" instead of any pronouns or names from the content
+        
         Instructions for Report Generation
         Assign scores based on clear, evidence-backed observations for each area.
 
@@ -331,20 +356,20 @@ Be creative in extracting information based on context."""
         🚀 Planning/Independence | [✅ Excellent/✅ Good/⚠️ Fair/📈 Needs Work] | [Brief summary]
 
         🌈 Curiosity Response Index: [1-10] / 10  
-        [Brief explanation of child's engagement with the curiosity seed]
+        [Brief explanation of {user_info['student_name']}'s engagement with the curiosity seed]
 
         🗣️ Communication Skills & Thought Clarity
         • Confidence level: [Describe based on speech and tone in text]  
-        • Clarity of thought: [Describe ability to express thoughts clearly and independently]  
+        • Clarity of thought: [Describe {user_info['student_name']}'s ability to express thoughts clearly and independently]  
         • Participation & engagement: [Describe based on frequency and quality of responses]  
         • Sequence of explanation: [Describe structure and coherence of thought process]  
 
         🧠 Overall Growth Score:  
         [🔵 Balanced Growth / 🟡 Moderate Growth / 🔴 Limited Growth] – [X/7] Areas Active 
-        [Brief recommendation for next steps or continued development]
+        [Brief recommendation for next steps or continued development for {user_info['student_name']}]
 
         📣 Note for Parent:  
-        [Comprehensive summary for parents with actionable insights and encouragement based on today's session]
+        [Comprehensive summary for parents with actionable insights and encouragement based on today's session for {user_info['student_name']}]
 
         🟢 Legend
 
@@ -639,6 +664,13 @@ Be creative in extracting information based on context."""
             custom_prompt = f"""
             You are an AI assistant for a learning observation system. Extract and structure information from the provided observation data based on the user's specific request.
 
+CRITICAL INSTRUCTIONS FOR NAME AND GENDER USAGE:
+- ALWAYS use the exact name from the database: {child_name}
+- NEVER use any names that appear in the observation data or audio transcriptions
+- NEVER assume gender - always refer to the student by their name "{child_name}" or as "the student"
+- Do not use gender-specific pronouns (he/his, she/her, they/them) anywhere in the report
+- When describing activities, use "{child_name}" or "the student" consistently
+
             Based on the following prompt and all available data for this child, generate a comprehensive custom report in the specified JSON format:
 
             USER PROMPT: {prompt}
@@ -651,18 +683,18 @@ Be creative in extracting information based on context."""
               "studentId": "Custom Report ID",
               "className": "Custom Analysis Report",
               "date": "{datetime.now().strftime('%Y-%m-%d')}",
-              "observations": "Detailed description combining all relevant observations that match the user's prompt",
-              "strengths": ["List of strengths observed in the student based on available data"],
-              "areasOfDevelopment": ["List of areas where the student needs improvement"],
-              "recommendations": ["List of recommended actions for improvement based on the prompt and data"]
+              "observations": "Detailed description combining all relevant observations that match the user's prompt - refer to '{child_name}' or 'the student'",
+              "strengths": ["List of strengths observed in {child_name} based on available data"],
+              "areasOfDevelopment": ["List of areas where {child_name} needs improvement"],
+              "recommendations": ["List of recommended actions for {child_name} based on the prompt and data"]
             }}
 
             For observations, provide full detailed descriptions like:
-            "The student learned how to make maggi from their mom through in-person mode, including all steps from boiling water to adding spices"
+            "{child_name} learned how to make maggi from their parent through in-person mode, including all steps from boiling water to adding spices"
 
             Be creative in extracting information based on context and ensure the response directly addresses the user's prompt: "{prompt}"
 
-            Please create a detailed, insightful report that addresses the user's specific request while incorporating relevant data from the child's observation history.
+            REMEMBER: Always use "{child_name}" from the database, never names from observation data, and avoid gender assumptions.
             """
 
             model = genai.GenerativeModel('gemini-2.0-flash')
@@ -798,6 +830,13 @@ Be creative in extracting information based on context."""
             monthly_prompt = f"""
             You are an AI assistant for a learning observation system. Generate a comprehensive monthly report based on the provided observation data.
 
+CRITICAL INSTRUCTIONS FOR NAME AND GENDER USAGE:
+- ALWAYS use the exact name from the database: {child_name}
+- NEVER use any names that appear in the observation data or audio transcriptions
+- NEVER assume gender - always refer to the student by their name "{child_name}" or as "the student"
+- Do not use gender-specific pronouns (he/his, she/her, they/them) anywhere in the report
+- When describing activities and progress, use "{child_name}" consistently
+
             MONTH: {calendar.month_name[month]} {year}
             STUDENT: {child_name}
             TOTAL OBSERVATIONS: {total_observations}
@@ -816,10 +855,10 @@ Be creative in extracting information based on context."""
               "studentId": "Monthly Report ID",
               "className": "Monthly Progress Summary",
               "date": "{calendar.month_name[month]} {year}",
-              "observations": "Comprehensive monthly summary combining all {total_observations} observations, highlighting key learning moments, progress patterns, and notable developments throughout the month",
-              "strengths": ["List of top strengths observed consistently throughout the month"],
-              "areasOfDevelopment": ["List of areas where the student needs continued focus and improvement"],
-              "recommendations": ["List of specific recommended actions for the next month based on observed patterns"],
+              "observations": "Comprehensive monthly summary combining all {total_observations} observations, highlighting key learning moments for {child_name}, progress patterns, and notable developments throughout the month",
+              "strengths": ["List of top strengths observed consistently in {child_name} throughout the month"],
+              "areasOfDevelopment": ["List of areas where {child_name} needs continued focus and improvement"],
+              "recommendations": ["List of specific recommended actions for {child_name} for the next month based on observed patterns"],
               "monthlyMetrics": {{
                 "totalObservations": {total_observations},
                 "activeGoals": {active_goals},
@@ -831,9 +870,9 @@ Be creative in extracting information based on context."""
             }}
 
             For observations, provide a comprehensive monthly summary like:
-            "Throughout {calendar.month_name[month]}, the student demonstrated consistent growth in multiple areas. Key learning highlights include [specific examples from observations]. The student showed particular strength in [areas] while developing skills in [areas]. Notable progress was observed in [specific skills/subjects]."
+            "Throughout {calendar.month_name[month]}, {child_name} demonstrated consistent growth in multiple areas. Key learning highlights include [specific examples from observations]. {child_name} showed particular strength in [areas] while developing skills in [areas]. Notable progress was observed in [specific skills/subjects]."
 
-            Include quantifiable metrics and suggest appropriate graphs for visual representation of the student's monthly progress. Be creative in extracting patterns and trends from the observation data.
+            REMEMBER: Always use "{child_name}" from the database, never names from observation data, and avoid all gender assumptions.
             """
 
             # Generate the report using AI
