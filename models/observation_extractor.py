@@ -349,7 +349,7 @@ Format it as a natural dialogue where:
             student_name = child["name"] if child and child.get("name") else "Student"
 
         prompt = f"""
-        You are an educational observer tasked with generating a comprehensive and accurate Daily Insights based on the following observational notes from a student session. Pay special attention to any achievements, learning moments, and areas for growth. The report should be structured, insightful, and easy to understand for parents. Add postives and negatives based on the text content provided.
+        You are an educational observer tasked with generating a comprehensive and accurate Day's Insights based on the following observational notes from a student session. Pay special attention to any achievements, learning moments, and areas for growth. The report should be structured, insightful, and easy to understand for parents. Add postives and negatives based on the text content provided.
 
         CRITICAL INSTRUCTIONS FOR NAME AND GENDER USAGE:
         - NEVER extract or use any name from the audio transcription or text content
@@ -391,7 +391,7 @@ Format it as a natural dialogue where:
         📝 TEXT CONTENT:
         {text_content}
 
-        🧾 Daily Insights Format for Parents
+        🧾 Day's Insights Format for Parents
 
         🧒 Child's Name: {student_name}
         📅 Date: [{user_info.get("session_date", "Today")}]
@@ -537,7 +537,7 @@ Format it as a natural dialogue where:
         font = style.font
         font.name = "Segoe UI Emoji"
 
-        title = doc.add_heading("📋 Daily Insights", 0)
+        title = doc.add_heading("📋 Day's Insights", 0)
         title.runs[0].font.name = "Segoe UI Emoji"
 
         # Process the report content line by line
@@ -675,7 +675,7 @@ Format it as a natural dialogue where:
         story = []
 
         # Add title
-        title = Paragraph("[Report] Daily Insights", title_style)
+        title = Paragraph("[Report] Day's Insights", title_style)
         story.append(title)
         story.append(Spacer(1, 12))
 
@@ -1542,4 +1542,3 @@ Please provide suggestions in this exact format:
 - Develop communication and expression skills
 
 🌟 **SESSION TIP:** Start with what interests {child_name} most and build the lesson around {pronouns["possessive"]} natural curiosity!"""
-
